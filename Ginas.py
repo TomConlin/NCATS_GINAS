@@ -1,8 +1,7 @@
 import json
 
 
-triples = [] # [None] * 4960000
-n = 0
+triples = []
 
 
 def make_spo(s, p, o):
@@ -16,7 +15,6 @@ def make_spo(s, p, o):
     # if statement is not None:
     # print(statement)
     triples.append(statement)
-
 
 
 OUTPUT = open('./ginas.nt', 'w')
@@ -39,7 +37,7 @@ for rec in ginas:
         structure = record['structure']
         for ref in structure['references']:
             make_spo(
-                pkey, 'structure_references', '<GINAS:' + ref + '>')
+                pkey, 'structure_references', '<GINASREF:' + ref + '>')
             make_spo(
                 pkey, 'structure_formula', '"' + structure['formula'] + '"')
         if 'substanceClass' in structure:
@@ -82,7 +80,7 @@ for rec in ginas:
             make_spo(pkey, 'names_stdName', '"' + name['stdName'] + '"')
             for ref in name['references']:
                 make_spo(
-                    pkey, '<name_references', '<GINAS:' + ref + '>')
+                    pkey, 'name_references', '<GINASREF:' + ref + '>')
     # Code
     for code in record['codes']:
         if 'type' in code and code["type"] == 'PRIMARY':
@@ -92,27 +90,27 @@ for rec in ginas:
                 'codes_code',
                 '<' + code['codeSystem'] + ':' + code['code'] + '>')
             for ref in code['references']:
-                make_spo(pkey, 'code_references', '<GINAS:' + ref + '>')
+                make_spo(pkey, 'code_references', '<GINASREF:' + ref + '>')
 
     # References (get their own pk)
     for reference in record['references']:
         if reference["publicDomain"]:
             make_spo(
-                pkey, 'reference_uuid', '<GINAS:' + reference['uuid'] + '>')
+                pkey, 'reference_uuid', '<GINASREF:' + reference['uuid'] + '>')
             make_spo(
-                'GINAS:' + reference['uuid'],
+                'GINASREF:' + reference['uuid'],
                 'reference_citation', '"' + reference['citation'] + '"')
             make_spo(
-                'GINAS:' + reference['uuid'],
+                'GINASREF:' + reference['uuid'],
                 'reference_docType',  '"' + reference['docType'] + '"')
             if 'url' in reference:
                 make_spo(
-                    'GINAS:' + reference['uuid'],
+                    'GINASREF:' + reference['uuid'],
                     'reference_url', '<' + reference['url'] + '>')
             if 'tags' in reference:
                 for tag in reference['tags']:
                     make_spo(
-                        'GINAS:' + reference['uuid'],
+                        'GINASREF:' + reference['uuid'],
                         'reference_tag', '"' + tag + '"')
 
 print('Statements: ' + str(len(triples)))
