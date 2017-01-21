@@ -1,6 +1,6 @@
 import yaml
 import json
-#  import rdflib
+import re
 import logging
 
 LOG = logging.getLogger(__name__)
@@ -33,6 +33,11 @@ files = {
 
         'unii_uuid': {
             'file': 'ginas_unii_uuid.tab'
+        },
+        'unii_inchikey': {
+            # from biothing's Greg Stuppie
+            'file': 'unii_inchikey.csv',
+            'url': 'https://raw.githubusercontent.com/stuppie/ncats-ingest/master/ginas/map_to_mydrug/unii_inchikey.csv'
         }
     }
 }
@@ -54,8 +59,6 @@ files = {
     # > fullSeedData-2016-06-16_sample.json
 
 
-
-
 triples = []
 
 CURIEMAP = yaml.load(files['curie']['file'])
@@ -66,18 +69,32 @@ with open(files['maps']['unii_uuid']['file']) as fh:
     for line in fh:
         line_count += 1
         try:
-            (unii, uuid) = line.split()
-            UUID_UNII[uuid] = unii
+            (unii, tab, uuid) = line.partition('\t')
+            UUID_UNII[uuid.strip()] = unii
         except ValueError:
-            LOG.error('UUID_UNII mapping file  %s failed to paded at line %i have %s',
+            LOG.error(
+                'UUID_UNII mapping file %s failed to parse at line %i have %s',
                 files['maps']['unii_uuid']['file'], line_count, line)
             break
 
+line_count = 0
+UNII_INCHIKEY = {}
+with open(files['maps']['unii_inchikey']['file']) as fh:
+    for line in fh:
+        line_count += 1
+        try:
+            (unii, comma, inchikey) = line.partition(',')
+            UNII_INCHIKEY[unii] = inchikey
+        except ValueError:
+            LOG.error(
+                'UNII_INCHIKEY file  %s failed to parse at line %i have %s',
+                files['maps']['unii_inchikey']['file'], line_count, line)
+            break
 
 
 def make_spo(s, p, o):
     # s & p get decorated, o we decorate ourselves
-    statement = '<' + s + '> <' + p + ':> ' + o + ' .'
+    statement = '<' + s + '> <' + p + '> ' + o + ' .'
     triples.append(statement)
 
 
@@ -94,29 +111,36 @@ for record in ginas['records']:
         unii = record['approvalID']
         pkey = 'UNII:' + unii
         if unii != altkey:
-            LOG.warning('outer UNII (%s) !=  inner UNII (%s) for record %s',
-            aktkey, unii, uuid)
+            LOG.warning(
+                'outer UNII (%s) !=  inner UNII (%s) for record %s',
+                altkey, unii, uuid)
     else:
         pkey = altkey
         # currently do not know where to link these
         # but want to see if they end up being reference by other records
 
     make_spo(pkey, 'GINAS:uuid', '"' + uuid + '"')
+    if unii in UNII_INCHIKEY:
+        make_spo(pkey, 'CHEBI:InChIKey', '"' + UNII_INCHIKEY[unii] + '"')
+    else:
+        LOG.info('No InchiKey for %s', pkey)
 
     # Structure
     if 'structure' in record:
         structure = record['structure']
-        for ref in structure['references']:
-            make_spo(
-                pkey, 'GINAS:structure_references', '<GINASREF:' + ref + '>')
-            make_spo(
-                pkey,
-                'GINAS:structure_formula', '"' + structure['formula'] + '"')
-        if 'substanceClass' in structure:
-            make_spo(
-                pkey,
-                'GINAS:structure_substanceClass',
-                '"' + structure['substanceClass'] + '"')
+
+        for att in (
+                'smiles', 'formula', 'opticalActivity', 'atropoisomerism',
+                'stereoComments', 'stereoCenters', 'definedStereo',
+                'ezCenters', 'charge', 'mwt'):
+
+            if att in structure and structure[att] is not None:
+                make_spo(
+                    pkey, 'GINAS:structure_' + att, '"' + structure[att] + '"')
+
+        # for ref in structure['references']:
+        #    make_spo(
+        #        pkey, 'GINAS:structure_references', '<GINASREF:' + ref + '>')
 
     # Mixture
     if 'mixture' in record:
@@ -132,17 +156,15 @@ for record in ginas['records']:
                 '<UNII:' + UUID_UNII[substance['refuuid']] + '>')
 
     # Moieties
-    # if 'moieties' in rec:
-    #    for moiety in moieties:
-    ####################################
+    # if 'moieties' in record:
+    #    for moiety in record['moieties']:
+    ######################################
 
-    #  "approvalID": "6V3I57K9UL",  already have as UNII
     #  "status": "approved",
     #  "approvedBy": "FDA_SRS",
     #  "deprecated": false,
     #  "approved": 1466087557792,      too big to be a unix timestamp
 
-    #  "substanceClass": "chemical",
     make_spo(
         pkey, 'GINAS:substanceClass', '"' + record['substanceClass'] + '"')
 
@@ -154,6 +176,7 @@ for record in ginas['records']:
             # for ref in name['references']:
             #    make_spo(
             #        pkey, 'name_references', '<GINASREF:' + ref + '>')
+
     # Code
     for code in record['codes']:
         if 'type' in code and code["type"] == 'PRIMARY':
@@ -165,6 +188,17 @@ for record in ginas['records']:
             for ref in code['references']:
                 make_spo(
                     pkey, 'GINAS:code_references', '<GINASREF:' + ref + '>')
+
+    # Relationships
+
+    for relationship in record['relationships']:
+        fkey = UUID_UNII[relationship["relatedSubstance"]['refuuid']]
+        pred = relationship['type']
+        pr9ed = re.sub(r'\>', '-', pred)
+        re.sub(r'\.0$', '', line[4])
+        make_spo(
+            pkey, 'GINAS:' + pred,
+            '<UNII:' + fkey + '>')  # "PARENT->SALT/SOLVATE",
 
     # References (get their own pk)
     for reference in record['references']:
