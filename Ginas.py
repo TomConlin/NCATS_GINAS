@@ -116,12 +116,13 @@ for record in ginas['records']:
                 altkey, unii, uuid)
     else:
         pkey = altkey
-        # currently do not know where to link these
-        # but want to see if they end up being reference by other records
+        # currently do not know where to link these to
+        # but want to see if they end up being referenced by other records
 
     make_spo(pkey, 'GINAS:uuid', '"' + uuid + '"')
     if unii in UNII_INCHIKEY:
-        make_spo(pkey, 'CHEBI:InChIKey', '"' + UNII_INCHIKEY[unii] + '"')
+        make_spo(
+            pkey, 'CHEBI:InChIKey', '"' + UNII_INCHIKEY[unii].strip() + '"')
     else:
         LOG.info('No InchiKey for %s', pkey)
 
@@ -129,14 +130,16 @@ for record in ginas['records']:
     if 'structure' in record:
         structure = record['structure']
 
-        for att in (
+        for att in [
                 'smiles', 'formula', 'opticalActivity', 'atropoisomerism',
                 'stereoComments', 'stereoCenters', 'definedStereo',
-                'ezCenters', 'charge', 'mwt'):
+                'ezCenters', 'charge', 'mwt']:
 
-            if att in structure and structure[att] is not None:
+            if att in structure and structure[att] is not None\
+                    and structure[att] != '':
                 make_spo(
-                    pkey, 'GINAS:structure_' + att, '"' + structure[att] + '"')
+                    pkey, 'GINAS:structure_' + att,
+                    '"' + str(structure[att]) + '"')
 
         # for ref in structure['references']:
         #    make_spo(
@@ -190,15 +193,39 @@ for record in ginas['records']:
                     pkey, 'GINAS:code_references', '<GINASREF:' + ref + '>')
 
     # Relationships
-
     for relationship in record['relationships']:
-        fkey = UUID_UNII[relationship["relatedSubstance"]['refuuid']]
-        pred = relationship['type']
-        pr9ed = re.sub(r'\>', '-', pred)
-        re.sub(r'\.0$', '', line[4])
-        make_spo(
-            pkey, 'GINAS:' + pred,
-            '<UNII:' + fkey + '>')  # "PARENT->SALT/SOLVATE",
+        if 'relatedSubstance' in relationship \
+                and relationship['relatedSubstance'] is not None:
+            relatedSubstance = relationship['relatedSubstance']
+            # there are multiple paths to a relationship identifier
+            fkey = related_unii = None
+            if 'approvalID' in relatedSubstance \
+                    and relatedSubstance['approvalID'] is not None:
+                fkey = relatedSubstance['approvalID']
+            else:
+                LOG.warning('Related Substance for %s is missing a UNII', pkey)
+            if 'refuuid' in relatedSubstance \
+                    and relatedSubstance['refuuid'] is not None:
+                related_unii = UUID_UNII[relatedSubstance['refuuid']]
+                if fkey is None:
+                    fkey = related_unii
+            else:
+                LOG.warning(
+                    'Related Substance for %s is missing a UUID', pkey)
+            if related_unii is None and fkey is None and related_unii != fkey:
+                LOG.warning(
+                    'Related Substance for %s contradicts %s v.s %s',
+                    pkey, fkey, related_unii)
+            if related_unii is None and fkey is None:
+                LOG.warning('No related identifier for %s', pkey)
+                continue
+
+            pred = relationship['type']
+            pred = re.sub(r'>', '-', pred)
+            pred = re.sub(r' ', '_', pred)
+            pred = re.sub(r'/', '_', pred)
+            make_spo(
+                pkey, 'GINAS:' + pred, '<UNII:' + fkey + '>')
 
     # References (get their own pk)
     for reference in record['references']:
@@ -206,21 +233,23 @@ for record in ginas['records']:
             make_spo(
                 pkey,
                 'GINAS:reference_uuid', '<GINASREF:' + reference['uuid'] + '>')
+            # many of these citations have empty xml tags:  <SRS_LEGACY_DATA>
             make_spo(
                 'GINASREF:' + reference['uuid'],
                 'GINAS:reference_citation', '"' + reference['citation'] + '"')
-            make_spo(
-                'GINASREF:' + reference['uuid'],
-                'GINAS:reference_docType',  '"' + reference['docType'] + '"')
-            if 'url' in reference:
+            # make_spo(
+            #    'GINASREF:' + reference['uuid'],
+            #    'GINAS:reference_docType',  '"' + reference['docType'] + '"')
+            if 'url' in reference:   # 'GINAS:reference_url'
                 make_spo(
                     'GINASREF:' + reference['uuid'],
-                    'GINAS:reference_url', '<' + reference['url'] + '>')
-            if 'tags' in reference:
-                for tag in reference['tags']:
-                    make_spo(
-                        'GINASREF:' + reference['uuid'],
-                        'GINAS:reference_tag', '"' + tag + '"')
+                    'OIO:hasdbxref', '<' + reference['url'] + '>')
+
+            # if 'tags' in reference:
+            #   for tag in reference['tags']:
+            #        make_spo(
+            #            'GINASREF:' + reference['uuid'],
+            #            'GINAS:reference_tag', '"' + tag + '"')
 
 print('Statements: ' + str(len(triples)))
 tripleset = set(triples)

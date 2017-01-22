@@ -1,25 +1,30 @@
 
 'rdfs'                      : 'http://www.w3.org/2000/01/rdf-schema#'
+'OIO'                       : 'http://www.geneontology.org/formats/oboInOwl#'
+'CHEBI'                     : 'http://purl.obolibrary.org/obo/chebi#'
 
-# not sure we need to propagate the UUID at all any more. maybe to expose json
+'names_name'	            : 'http://purl.obolibrary.org/obo/IAO_0000118'
+
+# not sure we need to propagate the UUID at all any more. 
+# maybe to expose json?
 # 'uuid'	                : 'blob:https://tripod.nih.gov/<uuid>'
 # 'uuid'                    :  https://tripod.nih.gov/ginas/app/api/v1/substances(<uuid>)
-'substanceClass'	        : 'http://tripod.nih.gov/ginas/app/substance#substanceClass'
 
 #'approvalID'	            : 'https://tripod.nih.gov/ginas/app/substances?q=<approvalID>'
 'approvalID'	            : 'https://fdasis.nlm.nih.gov/srs/unii/'
 
 # the leading underscore ???
 '_name'	                    : 'http://www.w3.org/2000/01/rdf-schema#label'
-'names_name'	            : 'http://purl.obolibrary.org/obo/IAO_0000118'
+'names_name'	            : 'http://purl.obolibrary.org/obo/IAO_0000118'     R
 'codes_codeSystem:code'	    : 'http://www.geneontology.org/formats/oboInOwl#hasDbXref'
 
 
 
 # The followling could all be expressed as base nodes to tripod ...
 # or given a curie name space
-'GINAS'                     : 'http://tripod.nih.gov/ginas/app/substance#
 
+'GINAS'                     : 'http://tripod.nih.gov/ginas/app/substance#
+'substanceClass'	        : 'http://tripod.nih.gov/ginas/app/substance#substanceClass'
 'references_citation'	    : 'http://tripod.nih.gov/ginas/app/substance#references_citation'
 'structure_smiles'	        : 'http://tripod.nih.gov/ginas/app/substance#structure_smiles'
 'structure_formula'	        : 'http://tripod.nih.gov/ginas/app/substance#structure_formula'
