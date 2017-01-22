@@ -186,7 +186,7 @@ for record in ginas['records']:
             # conflaing codeSystem:code  might not be the best idea
             make_spo(
                 pkey,
-                'GINAS:codes_code',
+                'OIO:hasdbxref',    # codes_code
                 '<' + code['codeSystem'] + ':' + code['code'] + '>')
             for ref in code['references']:
                 make_spo(
