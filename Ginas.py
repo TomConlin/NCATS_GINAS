@@ -109,7 +109,11 @@ for record in ginas['records']:
     altkey = UUID_UNII[uuid]
     if 'approvalID' in record:
         unii = record['approvalID']
-        pkey = 'UNII:' + unii
+        if 'cite:' == unii[0:5]:
+            pkey = unii
+        else:
+            pkey = 'UNII:' + unii
+
         if unii != altkey:
             LOG.warning(
                 'outer UNII (%s) !=  inner UNII (%s) for record %s',
@@ -221,13 +225,15 @@ for record in ginas['records']:
             if related_unii is None and fkey is None:
                 LOG.warning('No related identifier for %s', pkey)
                 continue
+            if fkey[0:5] != 'cite:':
+                fkey = 'UNII:' + fkey
 
             pred = relationship['type']
             pred = re.sub(r'>', '-', pred)
             pred = re.sub(r' ', '_', pred)
             pred = re.sub(r'/', '_', pred)
             make_spo(
-                pkey, 'GINAS:' + pred, '<UNII:' + fkey + '>')
+                pkey, 'GINAS:' + pred, '<' + fkey + '>')
 
     # References (get their own pk)
     for reference in record['references']:
