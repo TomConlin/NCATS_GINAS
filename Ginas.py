@@ -46,17 +46,17 @@ files = {
 # ginas = requests.get(GINASURL).json()
 
 
-    # def fetch():
-    # wget --timestamping https://tripod.nih.gov/ginas/gsrs/fullSeedData-2016-06-16.gsrs
-    # zcat fullSeedData-2016-06-16.gsrs | cut -f3 > fullSeedData-2016-06-16.json
-    # or
-    # curl GINASURL | zcat | cut -f3 > fullSeedData-2016-06-16.json
-    #
-    # Each row should be valid by itself, but all together they are not.
-    #
-    # resovoir_sample.awk -v K=10 fullSeedData-2016-06-16.json| \
-    # awk 'BEGIN{print"{\"records\":["}{if(last)print last ",";last=$0}END{print last "]}"}'\
-    # > fullSeedData-2016-06-16_sample.json
+# def fetch():
+#   wget --timestamping https://tripod.nih.gov/ginas/gsrs/fullSeedData-2016-06-16.gsrs
+#   zcat fullSeedData-2016-06-16.gsrs | cut -f3 > fullSeedData-2016-06-16.json
+#    or
+#    curl GINASURL | zcat | cut -f3 > fullSeedData-2016-06-16.json
+#
+#   Each row should be valid by itself, but all together they are not.
+#
+#   resovoir_sample.awk -v K=10 fullSeedData-2016-06-16.json| \
+#   awk 'BEGIN{print"{\"records\":["}{if(last)print last ",";last=$0}END{print last "]}"}'\
+#   > fullSeedData-2016-06-16_sample.json
 
 
 triples = []
@@ -184,6 +184,8 @@ for record in ginas['records']:
     for code in record['codes']:
         if 'type' in code and code["type"] == 'PRIMARY':
             # conflaing codeSystem:code  might not be the best idea
+            if code['codeSystem'] == '' or code['code'] == '':
+                continue
             make_spo(
                 pkey,
                 'OIO:hasdbxref',    # codes_code
@@ -240,7 +242,8 @@ for record in ginas['records']:
             # make_spo(
             #    'GINASREF:' + reference['uuid'],
             #    'GINAS:reference_docType',  '"' + reference['docType'] + '"')
-            if 'url' in reference:   # 'GINAS:reference_url'
+            if 'url' in reference and reference['url'] is not None \
+                    and reference['url'] != '':   # 'GINAS:reference_url'
                 make_spo(
                     'GINASREF:' + reference['uuid'],
                     'OIO:hasdbxref', '<' + reference['url'] + '>')
