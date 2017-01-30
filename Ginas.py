@@ -61,6 +61,10 @@ files = {
 
 triples = []
 
+# regular expression to limit what is found in the CURIE identifier
+# it is ascii centric and may(will) not pass some valid utf8 curies
+CURIERE = re.compile(r'^.*:[A-Za-z0-9_][A-Za-z0-9_.]*[A-Za-z0-9_]*$')
+
 CURIEMAP = yaml.load(files['curie']['file'])
 
 line_count = 0
@@ -92,10 +96,66 @@ with open(files['maps']['unii_inchikey']['file']) as fh:
             break
 
 
-def make_spo(s, p, o):
-    # s & p get decorated, o we decorate ourselves
-    statement = '<' + s + '> <' + p + '> ' + o + ' .'
-    triples.append(statement)
+
+def make_spo(sub, prd, obj):
+    '''
+    Decorates the three given strings as a line of ntriples
+
+    '''
+    # To establish string as a curi and expand we use a global curie_map(.yaml)
+    # sub are allways uri  (unless a bnode)
+    # prd are allways uri (unless prd is 'a')
+    # should fail loudly if curie does not exist
+    if prd == 'a':
+        prd = 'rdf:type'
+
+    (subcuri, subid) = re.split(r':', sub)
+    (prdcuri, prdid) = re.split(r':', prd)
+    objt = ''
+
+    # object is a curie or bnode or literal [string|number]
+    match = re.match(CURIERE, obj)
+    objcuri = None
+    if match is not None:
+        try:
+            (objcuri, objid) = re.split(r':', obj)
+        except ValueError:
+            match = None
+    if match is not None and objcuri in CURIEMAP:
+        objt = CURIEMAP[objcuri] + str(objid)
+        # allow unexpanded bnodes in object
+        if objcuri != '_' or CURIEMAP[objcuri] != '_:B':
+            objt = '<' + str(objt) + '>'
+    elif obj.isnumeric():
+        objt = '"' + str(obj) + '"'
+    else:
+        # Literals may not contain the characters ", LF, CR '\'
+        # except in their escaped forms. internal quotes as well.
+        obj = obj.strip('"').replace('\\', '\\\\').replace('"', '\'')
+        obj = obj.replace('\n', '\\n').replace('\r', '\\r')
+        objt = '"' + str(obj) + '"'
+
+    # allow unexpanded bnodes in subject
+    if subcuri is not None and subcuri in CURIEMAP and \
+            prdcuri is not None and prdcuri in CURIEMAP:
+        subjt = CURIEMAP[subcuri] + subid
+        if subcuri != '_' or CURIEMAP[subcuri] != '_:B':
+            subjt = '<' + str(subjt) + '>'
+
+        return subjt + ' <' + CURIEMAP[prdcuri] + str(prdid) + '> ' \
+            + str(objt) + ' .'
+    else:
+        LOG.error(
+            'Cant work with: ',
+            str(subcuri), str(subid),  str(prdcuri), str(prdid), str(objt))
+        return None
+
+
+def write_spo(sub, prd, obj):
+    '''
+        write triples to a buffer incase we decide to drop them
+    '''
+    triples.append(make_spo(sub, prd, obj))
 
 
 OUTPUT = open('./ginas.nt', 'w')
@@ -123,9 +183,9 @@ for record in ginas['records']:
         # currently do not know where to link these to
         # but want to see if they end up being referenced by other records
 
-    make_spo(pkey, 'GINAS:uuid', '"' + uuid + '"')
+    write_spo(pkey, 'GINAS:uuid', '"' + uuid + '"')
     if unii in UNII_INCHIKEY:
-        make_spo(
+        write_spo(
             pkey, 'CHEBI:InChIKey', '"' + UNII_INCHIKEY[unii].strip() + '"')
     else:
         LOG.info('No InchiKey for %s', pkey)
@@ -141,23 +201,23 @@ for record in ginas['records']:
 
             if att in structure and structure[att] is not None\
                     and structure[att] != '':
-                make_spo(
-                    pkey, 'GINAS:structure_' + att,
+                write_spo(
+                    pkey, 'GINAS:structure_' + str(att),
                     '"' + str(structure[att]) + '"')
 
         # for ref in structure['references']:
-        #    make_spo(
+        #    write_spo(
         #        pkey, 'GINAS:structure_references', '<GINASREF:' + ref + '>')
 
     # Mixture
     if 'mixture' in record:
         mixture = record['mixture']
         for component in mixture['components']:
-            make_spo(
+            write_spo(
                 pkey,
                 'GINAS:mixture_component_type', '"' + component['type'] + '"')
             substance = component['substance']
-            make_spo(
+            write_spo(
                 pkey,
                 'GINAS:mixture_component_substance',
                 '<UNII:' + UUID_UNII[substance['refuuid']] + '>')
@@ -172,16 +232,16 @@ for record in ginas['records']:
     #  "deprecated": false,
     #  "approved": 1466087557792,      too big to be a unix timestamp
 
-    make_spo(
-        pkey, 'GINAS:substanceClass', '"' + record['substanceClass'] + '"')
+    write_spo(
+        pkey, 'GINAS:substanceClass', '"' + str(record['substanceClass']) + '"')
 
     # Name
     for name in record['names']:
         if name["preferred"]:
-            make_spo(pkey,   'rdfs:label', '"' + name['stdName'] + '"')
+            write_spo(pkey,   'rdfs:label', '"' + str(name['stdName']) + '"')
 
             # for ref in name['references']:
-            #    make_spo(
+            #    write_spo(
             #        pkey, 'name_references', '<GINASREF:' + ref + '>')
 
     # Code
@@ -190,13 +250,13 @@ for record in ginas['records']:
             # conflaing codeSystem:code  might not be the best idea
             if code['codeSystem'] == '' or code['code'] == '':
                 continue
-            make_spo(
+            write_spo(
                 pkey,
                 'OIO:hasdbxref',    # codes_code
-                '<' + code['codeSystem'] + ':' + code['code'] + '>')
+                '<' + str(code['codeSystem']) + ':' + str(code['code']) + '>')
             for ref in code['references']:
-                make_spo(
-                    pkey, 'GINAS:code_references', '<GINASREF:' + ref + '>')
+                write_spo(
+                    pkey, 'GINAS:code_references', '<GINASREF:' + str(ref) + '>')
 
     # Relationships
     for relationship in record['relationships']:
@@ -232,31 +292,33 @@ for record in ginas['records']:
             pred = re.sub(r'>', '-', pred)
             pred = re.sub(r' ', '_', pred)
             pred = re.sub(r'/', '_', pred)
-            make_spo(
+            write_spo(
                 pkey, 'GINAS:' + pred, '<' + fkey + '>')
 
     # References (get their own pk)
     for reference in record['references']:
         if reference["publicDomain"]:
-            make_spo(
+            write_spo(
                 pkey,
-                'GINAS:reference_uuid', '<GINASREF:' + reference['uuid'] + '>')
+                'GINAS:reference_uuid',
+                '<GINASREF:' + str(reference['uuid']) + '>')
             # many of these citations have empty xml tags:  <SRS_LEGACY_DATA>
-            make_spo(
+            write_spo(
                 'GINASREF:' + reference['uuid'],
-                'GINAS:reference_citation', '"' + reference['citation'] + '"')
-            # make_spo(
+                'GINAS:reference_citation',
+                '"' + str(reference['citation']) + '"')
+            # write_spo(
             #    'GINASREF:' + reference['uuid'],
             #    'GINAS:reference_docType',  '"' + reference['docType'] + '"')
             if 'url' in reference and reference['url'] is not None \
                     and reference['url'] != '':   # 'GINAS:reference_url'
-                make_spo(
+                write_spo(
                     'GINASREF:' + reference['uuid'],
                     'OIO:hasdbxref', '<' + reference['url'] + '>')
 
             # if 'tags' in reference:
             #   for tag in reference['tags']:
-            #        make_spo(
+            #        write_spo(
             #            'GINASREF:' + reference['uuid'],
             #            'GINAS:reference_tag', '"' + tag + '"')
 
