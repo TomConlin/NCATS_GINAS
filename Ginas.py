@@ -1,3 +1,5 @@
+#! /usr/bin/env python3
+
 import yaml
 import json
 import re
@@ -12,7 +14,8 @@ GINASURL = 'https://tripod.nih.gov/ginas/gsrs/fullSeedData-2016-06-16.gsrs'
 
 files = {
     'f1': {
-        'file': 'fullSeedData-2016-06-16_records.json',   # for testing
+        'file': 'fullSeedData-2016-06-16_sample_pp.json',
+        # 'file': 'fullSeedData-2016-06-16_records.json',   # for testing
         'url': 'https://tripod.nih.gov/ginas/gsrs/fullSeedData-2016-06-16.gsrs'
     },
     'curie': {
@@ -47,15 +50,18 @@ files = {
 
 
 # def fetch():
-#   wget --timestamping https://tripod.nih.gov/ginas/gsrs/fullSeedData-2016-06-16.gsrs
-#   zcat fullSeedData-2016-06-16.gsrs | cut -f3 > fullSeedData-2016-06-16.json
+#   wget --timestamping \
+#       https://tripod.nih.gov/ginas/gsrs/fullSeedData-2016-06-16.gsrs
+#   fullSeedData-2016-06-16.json
 #    or
 #    curl GINASURL | zcat | cut -f3 > fullSeedData-2016-06-16.json
 #
 #   Each row should be valid by itself, but all together they are not.
 #
 #   resovoir_sample.awk -v K=10 fullSeedData-2016-06-16.json| \
-#   awk 'BEGIN{print"{\"records\":["}{if(last)print last ",";last=$0}END{print last "]}"}'\
+#   awk 'BEGIN{\
+#       print"{\"records\":["}\
+#       {if(last)print last ",";last=$0}END{print last "]}"}'\
 #   > fullSeedData-2016-06-16_sample.json
 
 
@@ -63,9 +69,18 @@ triples = []
 
 # regular expression to limit what is found in the CURIE identifier
 # it is ascii centric and may(will) not pass some valid utf8 curies
-CURIERE = re.compile(r'^.*:[A-Za-z0-9_][A-Za-z0-9_.]*[A-Za-z0-9_]*$')
+# note a standard uuid is not valid as it uses hyphens (cheated here)
+# 
+CURIERE = re.compile(r'^.*:[A-Za-z0-9_][A-Za-z0-9_.-]*[A-Za-z0-9_]*$')
 
 CURIEMAP = yaml.load(files['curie']['file'])
+
+with open(files['curie']['file'], 'r') as stream:
+    try:
+        CURIEMAP = yaml.load(stream)
+    except yaml.YAMLError as err:
+        print(err)
+        exit(-1)
 
 line_count = 0
 UUID_UNII = {}
@@ -96,7 +111,6 @@ with open(files['maps']['unii_inchikey']['file']) as fh:
             break
 
 
-
 def make_spo(sub, prd, obj):
     '''
     Decorates the three given strings as a line of ntriples
@@ -105,27 +119,37 @@ def make_spo(sub, prd, obj):
     # To establish string as a curi and expand we use a global curie_map(.yaml)
     # sub are allways uri  (unless a bnode)
     # prd are allways uri (unless prd is 'a')
-    # should fail loudly if curie does not exist
+    # should fail loudly if curie prefix does not exist
     if prd == 'a':
         prd = 'rdf:type'
 
     (subcuri, subid) = re.split(r':', sub)
     (prdcuri, prdid) = re.split(r':', prd)
-    objt = ''
 
-    # object is a curie or bnode or literal [string|number]
+    subjt = predt = objt = ''
+
+    # SUBJECT
+    if subcuri is not None and subcuri in CURIEMAP:
+        subjt = '<' + CURIEMAP[subcuri] + subid + '>'
+    else:
+        LOG.error('Subject Fail: ' + str(subcuri) + ':' + str(subid))
+
+    # PREDICATE
+    if prdcuri is not None and prdcuri in CURIEMAP:
+        predt = '<' + CURIEMAP[prdcuri] + prdid + '>'
+    else:
+        LOG.error('Predicate Fail: ' + str(prdcuri) + ':' + str(prdid))
+
+    # OBJECT is a curie or bnode or literal [string|number]
     match = re.match(CURIERE, obj)
-    objcuri = None
     if match is not None:
-        try:
-            (objcuri, objid) = re.split(r':', obj)
-        except ValueError:
-            match = None
+        (objcuri, objid) = re.split(r':', obj)
+    else:
+        LOG.info("OBJECT not a 'nice' CURIE: " + obj)
+
     if match is not None and objcuri in CURIEMAP:
-        objt = CURIEMAP[objcuri] + str(objid)
-        # allow unexpanded bnodes in object
-        if objcuri != '_' or CURIEMAP[objcuri] != '_:B':
-            objt = '<' + str(objt) + '>'
+        objt = '<' + CURIEMAP[objcuri] + str(objid) + '>'
+        # no bnodes
     elif obj.isnumeric():
         objt = '"' + str(obj) + '"'
     else:
@@ -135,26 +159,14 @@ def make_spo(sub, prd, obj):
         obj = obj.replace('\n', '\\n').replace('\r', '\\r')
         objt = '"' + str(obj) + '"'
 
-    # allow unexpanded bnodes in subject
-    if subcuri is not None and subcuri in CURIEMAP and \
-            prdcuri is not None and prdcuri in CURIEMAP:
-        subjt = CURIEMAP[subcuri] + subid
-        if subcuri != '_' or CURIEMAP[subcuri] != '_:B':
-            subjt = '<' + str(subjt) + '>'
-
-        return subjt + ' <' + CURIEMAP[prdcuri] + str(prdid) + '> ' \
-            + str(objt) + ' .'
-    else:
-        LOG.error(
-            'Cant work with: ',
-            str(subcuri), str(subid),  str(prdcuri), str(prdid), str(objt))
-        return None
+    return subjt + ' ' + predt + ' ' + objt + ' .'
 
 
 def write_spo(sub, prd, obj):
     '''
         write triples to a buffer incase we decide to drop them
     '''
+    # print(make_spo(sub, prd, obj))
     triples.append(make_spo(sub, prd, obj))
 
 
@@ -233,12 +245,14 @@ for record in ginas['records']:
     #  "approved": 1466087557792,      too big to be a unix timestamp
 
     write_spo(
-        pkey, 'GINAS:substanceClass', '"' + str(record['substanceClass']) + '"')
+        pkey, 'GINAS:substanceClass',
+        '"' + str(record['substanceClass']) + '"')
 
     # Name
     for name in record['names']:
         if name["preferred"]:
-            write_spo(pkey,   'rdfs:label', '"' + str(name['stdName']) + '"')
+            write_spo(
+                pkey, 'rdfs:label', '"' + str(name['stdName']) + '"')
 
             # for ref in name['references']:
             #    write_spo(
@@ -253,10 +267,11 @@ for record in ginas['records']:
             write_spo(
                 pkey,
                 'OIO:hasdbxref',    # codes_code
-                '<' + str(code['codeSystem']) + ':' + str(code['code']) + '>')
+                str(code['codeSystem']) + ':' + str(code['code']))
             for ref in code['references']:
                 write_spo(
-                    pkey, 'GINAS:code_references', '<GINASREF:' + str(ref) + '>')
+                    pkey, 'GINAS:code_references',
+                    'GINASREF:' + str(ref))
 
     # Relationships
     for relationship in record['relationships']:
@@ -293,7 +308,7 @@ for record in ginas['records']:
             pred = re.sub(r' ', '_', pred)
             pred = re.sub(r'/', '_', pred)
             write_spo(
-                pkey, 'GINAS:' + pred, '<' + fkey + '>')
+                pkey, 'GINAS:' + pred, fkey)
 
     # References (get their own pk)
     for reference in record['references']:
@@ -301,7 +316,7 @@ for record in ginas['records']:
             write_spo(
                 pkey,
                 'GINAS:reference_uuid',
-                '<GINASREF:' + str(reference['uuid']) + '>')
+                'GINASREF:' + str(reference['uuid']))
             # many of these citations have empty xml tags:  <SRS_LEGACY_DATA>
             write_spo(
                 'GINASREF:' + reference['uuid'],
