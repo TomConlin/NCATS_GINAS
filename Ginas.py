@@ -14,12 +14,12 @@ GINASURL = 'https://tripod.nih.gov/ginas/gsrs/fullSeedData-2016-06-16.gsrs'
 
 files = {
     'f1': {
-        'file': 'fullSeedData-2016-06-16_sample_pp.json',
-        # 'file': 'fullSeedData-2016-06-16_records.json',   # for testing
+        # 'file': 'fullSeedData-2016-06-16_sample_pp.json', # for testing
+        'file': 'fullSeedData-2016-06-16_records.json',
         'url': 'https://tripod.nih.gov/ginas/gsrs/fullSeedData-2016-06-16.gsrs'
     },
     'curie': {
-        # Via Matt's spreadsheet
+        # based on  Matt's spreadsheet
         # https://docs.google.com/spreadsheets
         # /d/1X46U8VChiBslOwcv8AtRgwMitgcrx2zw-61YdFHc3rs/edit#gid=994949323
 
@@ -69,8 +69,7 @@ triples = []
 
 # regular expression to limit what is found in the CURIE identifier
 # it is ascii centric and may(will) not pass some valid utf8 curies
-# note a standard uuid is not valid as it uses hyphens (cheated here)
-# 
+# note a standard uuid is not valid as it uses hyphens (so cheated here)
 CURIERE = re.compile(r'^.*:[A-Za-z0-9_][A-Za-z0-9_.-]*[A-Za-z0-9_]*$')
 
 CURIEMAP = yaml.load(files['curie']['file'])
@@ -219,7 +218,7 @@ for record in ginas['records']:
 
         # for ref in structure['references']:
         #    write_spo(
-        #        pkey, 'GINAS:structure_references', '<GINASREF:' + ref + '>')
+        #        pkey, 'GINAS:structure_references', 'GINASREF:' + ref)
 
     # Mixture
     if 'mixture' in record:
@@ -336,6 +335,161 @@ for record in ginas['records']:
             #        write_spo(
             #            'GINASREF:' + reference['uuid'],
             #            'GINAS:reference_tag', '"' + tag + '"')
+
+
+###############################################################################
+# type the predicates
+# cut -f2 -d ' ' ginas.nt  | sort -u
+
+AnnotationProperty = [
+    'GINAS:uuid',
+    'CHEBI:InChIKey',
+    'GINAS:substanceClass',
+    'rdfs:label',
+    'OIO:hasdbxref',
+    'GINAS:reference_citation',
+    'GINAS:structure_formula',
+
+    # things in Matts spreadsheet that are not used here
+    # 'GINAS:structure_smiles',
+    # 'GINAS:references_citation',
+    # 'OBO:IAO_0000118', # alternative term
+    # 'GINAS:approvalID',
+
+    # things not in Matts spreadsheet that need to be here (or somewhere)
+    'GINAS:code_references',
+    'GINAS:structure_charge',
+    'GINAS:reference_uuid',
+    'GINAS:mixture_component_substance',
+    'GINAS:mixture_component_type',
+
+]
+for curie in AnnotationProperty:
+    write_spo(curie, 'a', 'owl:AnnotationProperty')
+
+DatatypeProperty = [
+    'GINAS:structure_opticalActivity',
+    # 'GINAS:structure_atropoisomerism',
+    'GINAS:structure_stereoComments',
+    'GINAS:structure_stereoCenters',
+    'GINAS:structure_definedStereo',
+    'GINAS:structure_ezCenters',
+    'GINAS:structure_charge',
+    'GINAS:structure_mwt'
+]
+
+for curie in AnnotationProperty:
+    write_spo(curie, 'a', 'owl:DatatypeProperty')
+
+# owl:ObjectProperties
+
+ObjectProperty = [
+    'GINAS:ACTIVE_CONSTITUENT_ALWAYS_PRESENT--PARENT',
+    'GINAS:ACTIVE_ENANTIOMER--RACEMATE',
+    'GINAS:ACTIVE_ISOMER--PARENT',
+    'GINAS:AGONIST--TARGET',
+    'GINAS:BIOSIMILAR--PARENT',
+    'GINAS:CONJUGATE_COMPONENT--CONJUGATED_ANTIGEN',
+    'GINAS:CONJUGATED_ANTIGEN--CONJUGATE_COMPONENT',
+    'GINAS:CONJUGATE--PARENT',
+    'GINAS:CONJUGATE--TOXIN',
+    'GINAS:CONSTITUENT_ALWAYS_PRESENT--PARENT',
+    'GINAS:CONSTITUENT_MAY_BE_PRESENT--PARENT',
+    'GINAS:DEGRADENT--PARENT',
+    'GINAS:DERIVATIVE--PARENT',
+    'GINAS:DIASTEREOISOMER--DIASTEREOISOMER',
+    'GINAS:DIASTEREOISOMER--EPIMER',
+    'GINAS:DRUG_INTERACTION--FOOD',
+    'GINAS:ENANTIOMER--ENANTIOMER',
+    'GINAS:ENANTIOMER--RACEMATE',
+    'GINAS:EPIMER--DIASTEREOISOMER',
+    'GINAS:FATTY_ACID--LIPID',
+    'GINAS:FOOD--DRUG_INTERACTION',
+    'GINAS:IMPURITY--PARENT',
+    'GINAS:INACTIVE_ISOMER--PARENT',
+    'GINAS:INDUCER--METABOLIC_ENZYME',
+    'GINAS:INDUCER--TRANSPORTER',
+    'GINAS:INFRASPECIFIC--PARENT_ORGANISM',
+    'GINAS:INHIBITOR--METABOLIC_ENZYME',
+    'GINAS:INHIBITOR--TARGET',
+    'GINAS:INHIBITOR--TRANSPORTER',
+    'GINAS:LABELED--NON-LABELED',
+    'GINAS:LESS_ACTIVE_ISOMER--PARENT',
+    'GINAS:LIPID--FATTY_ACID',
+    'GINAS:METABOLIC_ENZYME--INDUCER',
+    'GINAS:METABOLIC_ENZYME--INHIBITOR',
+    'GINAS:METABOLIC_ENZYME--NON-INDUCER',
+    'GINAS:METABOLIC_ENZYME--NON-INHIBITOR',
+    'GINAS:METABOLIC_ENZYME--NON-SUBSTRATE',
+    'GINAS:METABOLIC_ENZYME--SUBSTRATE',
+    'GINAS:METABOLITE_ACTIVE--PARENT',
+    'GINAS:METABOLITE_ACTIVE--PRODRUG',
+    'GINAS:METABOLITE_INACTIVE--PARENT',
+    'GINAS:METABOLITE_LESS_ACTIVE--PARENT',
+    'GINAS:METABOLITE--PARENT',
+    'GINAS:METABOLITE_TOXIC--PARENT',
+    'GINAS:MORE_ACTIVE_ISOMER--PARENT',
+    'GINAS:NON-INDUCER--METABOLIC_ENZYME',
+    'GINAS:NON-INHIBITOR--METABOLIC_ENZYME',
+    'GINAS:NON-LABELED--LABELED',
+    'GINAS:NON-SUBSTRATE--METABOLIC_ENZYME',
+    'GINAS:NON-SUBSTRATE--TRANSPORTER',
+    'GINAS:PARENT--ACTIVE_CONSTITUENT_ALWAYS_PRESENT',
+    'GINAS:PARENT--ACTIVE_ISOMER',
+    'GINAS:PARENT--BIOSIMILAR',
+    'GINAS:PARENT--CONJUGATE',
+    'GINAS:PARENT--CONSTITUENT_ALWAYS_PRESENT',
+    'GINAS:PARENT--CONSTITUENT_MAY_BE_PRESENT',
+    'GINAS:PARENT--DEGRADENT',
+    'GINAS:PARENT--DERIVATIVE',
+    'GINAS:PARENT--IMPURITY',
+    'GINAS:PARENT--LESS_ACTIVE_ISOMER',
+    'GINAS:PARENT--METABOLITE',
+    'GINAS:PARENT--METABOLITE_ACTIVE',
+    'GINAS:PARENT--METABOLITE_INACTIVE',
+    'GINAS:PARENT--METABOLITE_LESS_ACTIVE',
+    'GINAS:PARENT--METABOLITE_TOXIC',
+    'GINAS:PARENT--MORE_ACTIVE_ISOMER',
+    'GINAS:PARENT_ORGANISM--INFRASPECIFIC',
+    'GINAS:PARENT_ORGANISM--PART_FRACTION',
+    'GINAS:PARENT--POSSIBLE_ACTIVE_CONSTITUENT_ALWAYS_PRESENT',
+    'GINAS:PARENT--SALT_SOLVATE',
+    'GINAS:PART_FRACTION--PARENT_ORGANISM',
+    'GINAS:POSSIBLE_ACTIVE_CONSTITUENT_ALWAYS_PRESENT--PARENT',
+    'GINAS:PRODRUG--METABOLITE_ACTIVE',
+    'GINAS:RACEMATE--ACTIVE_ENANTIOMER',
+    'GINAS:RACEMATE--ENANTIOMER',
+    'GINAS:RADIOISOTOPE--RADIOISOTOPE',
+    'GINAS:SALT_SOLVATE--PARENT',
+    'GINAS:SALT_SOLVATE--SALT_SOLVATE',
+    'GINAS:SUB_CONCEPT--SUBSTANCE',
+    'GINAS:SUBSTANCE--SUB_CONCEPT',
+    'GINAS:SUBSTRATE--METABOLIC_ENZYME',
+    'GINAS:SUBSTRATE--TRANSPORTER',
+    'GINAS:TARGET--INHIBITOR',
+    'GINAS:TOXIN--CONJUGATE',
+    'GINAS:TRANSPORTER--INDUCER',
+    'GINAS:TRANSPORTER--INHIBITOR',
+    'GINAS:TRANSPORTER--NON-INHIBITOR',
+    'GINAS:TRANSPORTER--NON-SUBSTRATE',
+    'GINAS:TRANSPORTER--SUBSTRATE',
+    # things that look wonky
+    'GINAS:SPECIFIED_SUBSTANCE--_',
+    # things that did not match the child->parent pattern
+    'GINAS:ACTIVE_CONSTITUENT_ALWAYS_PRESENT',
+    'GINAS:ACTIVE_MOIETY',
+    'GINAS:IONIC_MOIETY',
+    'GINAS:BASIS_OF_STRENGTH',
+    'GINAS:EXCRETED_UNCHANGED',
+    'GINAS:METABOLITE_ACTIVE',
+    'GINAS:MOLECULAR_FRAGMENT',
+    'GINAS:SUBSTANCE_ASSAY_DEFINED_AMOUNT',
+    'GINAS:UNSPECIFIED_INGREDIENT',
+]
+
+for curie in ObjectProperty:
+    write_spo(curie, 'a', 'owl:ObjectProperty')
+
 
 print('Statements: ' + str(len(triples)))
 tripleset = set(triples)
