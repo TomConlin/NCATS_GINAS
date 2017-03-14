@@ -2,25 +2,34 @@
 'rdfs'                      : 'http://www.w3.org/2000/01/rdf-schema#'
 'OIO'                       : 'http://www.geneontology.org/formats/oboInOwl#'
 'CHEBI'                     : 'http://purl.obolibrary.org/obo/chebi#'
+'owl'                       : 'http://www.w3.org/2002/07/owl#'
+'OBO'                       : 'http://purl.obolibrary.org/obo/'
 
-'names_name'	            : 'http://purl.obolibrary.org/obo/'
-'UNII'	                    : 'https://fdasis.nlm.nih.gov/srs/unii/'
-'rdfs'						: 'http://www.w3.org/2000/01/rdf-schema#'
+'names_name'                : 'http://purl.obolibrary.org/obo/'   # ???
+'UNII'                      : 'https://fdasis.nlm.nih.gov/srs/unii/'
+'rdfs'                      : 'http://www.w3.org/2000/01/rdf-schema#'
+'rdf'                       : 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'
+
+# linking to search is not the ideal IRI (may not need an IRI either)
+#'InChiKey'                  :  'https://www.ebi.ac.uk/unichem/frontpage/results?kind=InChIKey&queryText='
 
 # The followling could all be expressed as base nodes to tripod ...
 # or given a curie name space
 
-'GINAS'                     : 'http://tripod.nih.gov/ginas/app/substance#
-'GINASREF'                  : 'http://127.0.0.1/'
-'cite'                      : 'htto://127.0.0.1/' 
+'GINAS'                     : 'http://tripod.nih.gov/ginas/app/substance#'
+# unroutable iri prefixs for where we know not 
+'GINASREF'                  : 'http://127.0.0.1/ref/'
+'cite'                      : 'http://127.0.0.1/cite/'
 
-
-'MESH'						: 'http://purl.obolibrary.org/obo/MESH_'		
-'CAS'						: 'http://www.cas-no.org/'
-'MERCK_INDEX'				: 'https://www.rsc.org/Merck-Index/monograph/'		
-'ECHA'						: 'https://www.echa.europa.eu/web/guest/substance-information/-/substanceinfo/'
-'NCI_THESAURUS'				: 'https://ncit.nci.nih.gov/ncitbrowser/ConceptReport.jsp?dictionary=NCI_Thesaurus&code=' 	
-'RXCUI'						: 'http://purl.bioontology.org/ontology/RXNORM/'
-'WIKIPEDIA'					: 'https://en.wikipedia.org/wiki/'		
-'NCBITaxon'					: 'http://purl.obolibrary.org/obo/NCBITaxon_'		
-'INN'						: 'https://mednet-communities.net/inn/db/ViewINN.aspx?i='
+'MESH'                      : 'http://purl.obolibrary.org/obo/MESH_'
+'CAS'                       : 'http://www.cas-no.org/'
+'MERCK_INDEX'               : 'https://www.rsc.org/Merck-Index/monograph/'
+'ECHA'                      : 'https://www.echa.europa.eu/web/guest/substance-information/-/substanceinfo/'
+'NCI_THESAURUS'             : 'https://ncit.nci.nih.gov/ncitbrowser/ConceptReport.jsp?dictionary=NCI_Thesaurus&code='
+'RXCUI'                     : 'http://purl.bioontology.org/ontology/RXNORM/'
+'WIKIPEDIA'                 : 'https://en.wikipedia.org/wiki/'
+'NCBITaxon'                 : 'http://purl.obolibrary.org/obo/NCBITaxon_'
+'INN'                       : 'https://mednet-communities.net/inn/db/ViewINN.aspx?i='
+# WHO-DD
+# FDA SRS
+# SRS CODE IMPORT

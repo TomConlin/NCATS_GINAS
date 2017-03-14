@@ -197,7 +197,7 @@ for record in ginas['records']:
     write_spo(pkey, 'GINAS:uuid', '"' + uuid + '"')
     if unii in UNII_INCHIKEY:
         write_spo(
-            pkey, 'CHEBI:InChIKey', '"' + UNII_INCHIKEY[unii].strip() + '"')
+            pkey, 'CHEBI:InChIKey', UNII_INCHIKEY[unii].strip())
     else:
         LOG.info('No InchiKey for %s', pkey)
 
