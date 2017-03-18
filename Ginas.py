@@ -14,14 +14,13 @@ GINASURL = 'https://tripod.nih.gov/ginas/gsrs/fullSeedData-2016-06-16.gsrs'
 
 files = {
     'f1': {
-        # 'file': 'fullSeedData-2016-06-16_sample_pp.json', # for testing
-        'file': 'fullSeedData-2016-06-16_records.json',
+        'file': 'fullSeedData-2016-06-16_sample_pp.json',  # for testing
+        # 'file': 'fullSeedData-2016-06-16_records.json',
         'url': 'https://tripod.nih.gov/ginas/gsrs/fullSeedData-2016-06-16.gsrs'
     },
     'curie': {
         # based on  Matt's spreadsheet
-        # https://docs.google.com/spreadsheets
-        # /d/1X46U8VChiBslOwcv8AtRgwMitgcrx2zw-61YdFHc3rs/edit#gid=994949323
+        # https://docs.google.com/spreadsheets/d/1X46U8VChiBslOwcv8AtRgwMitgcrx2zw-61YdFHc3rs/edit#gid=994949323
 
         'file': 'ginas_curie.yaml'
     },
@@ -252,6 +251,9 @@ for record in ginas['records']:
         if name["preferred"]:
             write_spo(
                 pkey, 'rdfs:label', '"' + str(name['stdName']) + '"')
+        else:
+            write_spo(  # IOA:alternative term
+                pkey, 'IOA:0000118', '"' + str(name['stdName']) + '"')
 
             # for ref in name['references']:
             #    write_spo(
@@ -341,28 +343,25 @@ for record in ginas['records']:
 # type the predicates
 # cut -f2 -d ' ' ginas.nt  | sort -u
 
+write_spo('rdfs:label', 'a', 'rdf:Property')
+
 AnnotationProperty = [
     'GINAS:uuid',
     'CHEBI:InChIKey',
     'GINAS:substanceClass',
-    'rdfs:label',
     'OIO:hasdbxref',
     'GINAS:reference_citation',
     'GINAS:structure_formula',
-
+    'GINAS:structure_smiles',
+    'alternative term'  # 'OBO:IAO_0000118'
     # things in Matts spreadsheet that are not used here
-    # 'GINAS:structure_smiles',
-    # 'GINAS:references_citation',
-    # 'OBO:IAO_0000118', # alternative term
-    # 'GINAS:approvalID',
-
+    # 'GINAS:references_citation',  (is a structuraly central object)
+    # 'GINAS:approvalID',           (is UNII)
     # things not in Matts spreadsheet that need to be here (or somewhere)
     'GINAS:code_references',
-    'GINAS:structure_charge',
     'GINAS:reference_uuid',
     'GINAS:mixture_component_substance',
-    'GINAS:mixture_component_type',
-
+    'GINAS:mixture_component_type'
 ]
 for curie in AnnotationProperty:
     write_spo(curie, 'a', 'owl:AnnotationProperty')
@@ -378,7 +377,7 @@ DatatypeProperty = [
     'GINAS:structure_mwt'
 ]
 
-for curie in AnnotationProperty:
+for curie in DatatypeProperty:
     write_spo(curie, 'a', 'owl:DatatypeProperty')
 
 # owl:ObjectProperties
