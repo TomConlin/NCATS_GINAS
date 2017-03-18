@@ -4,8 +4,8 @@
 'CHEBI'                     : 'http://purl.obolibrary.org/obo/chebi#'
 'owl'                       : 'http://www.w3.org/2002/07/owl#'
 'OBO'                       : 'http://purl.obolibrary.org/obo/'
+'IAO'                       : 'http://purl.obolibrary.org/obo/IAO_'
 
-'names_name'                : 'http://purl.obolibrary.org/obo/'   # ???
 'UNII'                      : 'https://fdasis.nlm.nih.gov/srs/unii/'
 'rdfs'                      : 'http://www.w3.org/2000/01/rdf-schema#'
 'rdf'                       : 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'
